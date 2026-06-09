@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react
 import OrderForm from './components/OrderForm';
 import AdminLogin from './components/AdminLogin';
 import AdminDashboard from './components/AdminDashboard';
+import OrderHistory from './components/OrderHistory';
+import TrackOrder from './components/TrackOrder';
 import { ChefHat, Settings } from 'lucide-react';
 
 function Navigation() {
@@ -10,20 +12,31 @@ function Navigation() {
   const isAdmin = location.pathname.startsWith('/admin');
 
   return (
-    <nav className="glass sticky top-0 z-50 px-6 py-4 mb-8 flex justify-between items-center rounded-b-2xl mx-4 lg:mx-auto max-w-6xl">
+    <nav className="glass sticky top-0 z-50 px-6 py-4 mb-8 flex flex-col sm:flex-row gap-4 justify-between items-center rounded-b-2xl mx-4 lg:mx-auto max-w-6xl">
       <Link to="/" className="flex items-center gap-2 text-xl font-bold text-orange-500 hover:text-orange-600 transition-colors">
         <ChefHat className="w-8 h-8" />
         <span>FoodieExpress</span>
       </Link>
       
-      <div>
+      <div className="flex flex-wrap items-center gap-4 sm:gap-6 justify-center">
         {!isAdmin ? (
-          <Link to="/admin/login" className="flex items-center gap-2 text-slate-600 hover:text-orange-500 font-medium transition-colors">
-            <Settings className="w-5 h-5" />
-            Admin Panel
-          </Link>
+          <>
+            <Link to="/" className="text-slate-600 hover:text-orange-500 font-medium transition-colors text-sm sm:text-base">
+              Order Food
+            </Link>
+            <Link to="/history" className="text-slate-600 hover:text-orange-500 font-medium transition-colors text-sm sm:text-base">
+              Order History
+            </Link>
+            <Link to="/track" className="text-slate-600 hover:text-orange-500 font-medium transition-colors text-sm sm:text-base">
+              Track Order
+            </Link>
+            <Link to="/admin/login" className="flex items-center gap-1.5 text-slate-600 hover:text-orange-500 font-medium transition-colors text-sm sm:text-base border-l border-slate-200 pl-4">
+              <Settings className="w-4 h-4" />
+              Admin Panel
+            </Link>
+          </>
         ) : (
-          <Link to="/" className="flex items-center gap-2 text-slate-600 hover:text-orange-500 font-medium transition-colors">
+          <Link to="/" className="flex items-center gap-2 text-slate-600 hover:text-orange-500 font-medium transition-colors text-sm sm:text-base">
             Order Food
           </Link>
         )}
@@ -40,6 +53,9 @@ function App() {
         <main className="max-w-6xl mx-auto px-4">
           <Routes>
             <Route path="/" element={<OrderForm />} />
+            <Route path="/history" element={<OrderHistory />} />
+            <Route path="/track" element={<TrackOrder />} />
+            <Route path="/track/:id" element={<TrackOrder />} />
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
           </Routes>

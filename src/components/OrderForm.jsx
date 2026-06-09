@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { ShoppingBag, Plus, Minus, CheckCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ShoppingBag, Plus, Minus, CheckCircle, ShieldAlert } from 'lucide-react';
 import api from '../api';
+import LoadingSpinner from './LoadingSpinner';
 
 const MENU = [
   { id: 'm1', name: 'Deluxe Thali', price: 250, desc: 'Complete Indian meal' },
@@ -14,6 +16,9 @@ function OrderForm() {
   const [name, setName] = useState('');
   const [quantities, setQuantities] = useState({});
   const [success, setSuccess] = useState(false);
+  const [createdOrderId, setCreatedOrderId] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const updateQty = (id, delta) => {
     setQuantities(prev => {
@@ -35,18 +40,23 @@ function OrderForm() {
 
     if (items.length === 0 || !name.trim()) return;
 
+    setLoading(true);
+    setError('');
     try {
-      await api.post('/orders', { customerName: name, items, total });
+      const res = await api.post('/orders', { customerName: name, items, totalAmount: total });
+      setCreatedOrderId(res.data._id);
       setSuccess(true);
       setName('');
       setQuantities({});
-      setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
+      setError('Something went wrong, please try again');
       console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (success) {
+  if (success && createdOrderId) {
     return (
       <div className="glass p-12 rounded-2xl flex flex-col items-center justify-center text-center animate-fade-in max-w-2xl mx-auto">
         <div className="relative mb-6">
@@ -54,17 +64,27 @@ function OrderForm() {
           <CheckCircle className="w-20 h-20 text-green-500 relative z-10 bg-white rounded-full" />
         </div>
         <h2 className="text-3xl font-bold text-slate-800 mb-2">Order Confirmed!</h2>
-        <p className="text-slate-500">Your delicious food will be preparing shortly. Sit tight!</p>
-        <button onClick={() => setSuccess(false)} className="mt-8 px-6 py-2 bg-orange-100 text-orange-600 rounded-full font-medium hover:bg-orange-200 transition-colors">
-          Place Another Order
-        </button>
+        <p className="text-slate-500 mb-4">Your delicious food is being prepared shortly.</p>
+        <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 mb-6 w-full max-w-md">
+          <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Your Order ID</p>
+          <p className="font-mono text-sm font-bold text-slate-700 select-all mt-1">{createdOrderId}</p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-3 w-full justify-center">
+          <Link to={`/track/${createdOrderId}`} className="px-6 py-2.5 bg-orange-500 text-white font-medium rounded-xl hover:bg-orange-600 transition-colors shadow-md shadow-orange-500/20 text-center">
+            Track Order Status
+          </Link>
+          <button onClick={() => { setSuccess(false); setCreatedOrderId(''); }} className="px-6 py-2.5 bg-slate-100 text-slate-600 rounded-xl font-medium hover:bg-slate-200 transition-colors">
+            Place Another Order
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="grid md:grid-cols-3 gap-8">
-      <div className="md:col-span-2 space-y-6">
+    <div className="flex flex-col md:flex-row gap-8">
+      {/* Menu Area */}
+      <div className="flex-1 space-y-6">
         <div className="glass p-6 rounded-2xl animate-fade-in">
           <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
             <ShoppingBag className="w-6 h-6 text-orange-500" />
@@ -91,9 +111,18 @@ function OrderForm() {
         </div>
       </div>
 
-      <div className="md:col-span-1">
+      {/* Checkout Sidebar */}
+      <div className="w-full md:w-80 lg:w-96">
         <div className="glass p-6 rounded-2xl sticky top-24 animate-fade-in">
           <h3 className="text-xl font-bold text-slate-800 mb-4">Cart Checkout</h3>
+          
+          {error && (
+            <div className="bg-red-50 border border-red-100 text-red-600 p-3 rounded-lg mb-4 text-sm flex items-start gap-2 font-medium">
+              <ShieldAlert className="w-5 h-5 shrink-0 text-red-500" />
+              <span>{error}</span>
+            </div>
+          )}
+
           <form onSubmit={submitOrder} className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Your Name</label>
@@ -115,8 +144,8 @@ function OrderForm() {
               <span className="text-2xl font-bold text-slate-800">₹{total}</span>
             </div>
 
-            <button type="submit" disabled={total === 0 || !name.trim()} className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-lg shadow-orange-500/30">
-              Confirm Order
+            <button type="submit" disabled={total === 0 || !name.trim() || loading} className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-lg shadow-orange-500/30 flex justify-center items-center">
+              {loading ? <LoadingSpinner size="sm" /> : 'Confirm Order'}
             </button>
           </form>
         </div>
