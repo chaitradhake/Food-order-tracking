@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingBag, Plus, Minus, CheckCircle, ShieldAlert } from 'lucide-react';
 import api from '../api';
 import LoadingSpinner from './LoadingSpinner';
+import { useAuth } from '../context/AuthContext';
 
 const MENU = [
   { id: 'm1', name: 'Deluxe Thali', price: 250, desc: 'Complete Indian meal' },
@@ -13,12 +14,69 @@ const MENU = [
 ];
 
 function OrderForm() {
+  const { isAuthenticated, user } = useAuth();
+  const navigate = useNavigate();
   const [name, setName] = useState('');
   const [quantities, setQuantities] = useState({});
   const [success, setSuccess] = useState(false);
   const [createdOrderId, setCreatedOrderId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Prefill name when user logs in or out
+  useEffect(() => {
+    if (user) {
+      setName(user.name);
+    } else {
+      setName('');
+    }
+  }, [user]);
+
+  // Handle restoring pending order after login
+  useEffect(() => {
+    const pending = localStorage.getItem('pendingOrder');
+    if (pending && isAuthenticated && user) {
+      try {
+        const { quantities: savedQuantities, name: savedName } = JSON.parse(pending);
+        localStorage.removeItem('pendingOrder');
+
+        setQuantities(savedQuantities);
+        const resolvedName = user.name || savedName;
+        setName(resolvedName);
+
+        const items = MENU.filter(item => savedQuantities[item.id] > 0).map(item => ({
+          name: item.name,
+          price: item.price,
+          quantity: savedQuantities[item.id]
+        }));
+        
+        const pendingTotal = MENU.reduce((sum, item) => sum + (item.price * (savedQuantities[item.id] || 0)), 0);
+
+        if (items.length > 0 && resolvedName.trim()) {
+          const autoSubmit = async () => {
+            setLoading(true);
+            setError('');
+            try {
+              const res = await api.post('/orders', { customerName: resolvedName, items, totalAmount: pendingTotal });
+              setCreatedOrderId(res.data._id);
+              setSuccess(true);
+              setName('');
+              setQuantities({});
+            } catch (err) {
+              setError('Failed to submit order. Please try confirming again.');
+              console.error(err);
+            } finally {
+              setLoading(false);
+            }
+          };
+          autoSubmit();
+        }
+      } catch (err) {
+        console.error('Failed to parse pending order', err);
+        localStorage.removeItem('pendingOrder');
+      }
+    }
+  }, [isAuthenticated, user]);
 
   const updateQty = (id, delta) => {
     setQuantities(prev => {
@@ -31,7 +89,8 @@ function OrderForm() {
   const total = MENU.reduce((sum, item) => sum + (item.price * (quantities[item.id] || 0)), 0);
 
   const submitOrder = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
+    
     const items = MENU.filter(item => quantities[item.id] > 0).map(item => ({
       name: item.name,
       price: item.price,
@@ -39,6 +98,13 @@ function OrderForm() {
     }));
 
     if (items.length === 0 || !name.trim()) return;
+
+    if (!isAuthenticated) {
+      // Save order details and redirect to login
+      localStorage.setItem('pendingOrder', JSON.stringify({ quantities, name }));
+      navigate('/login');
+      return;
+    }
 
     setLoading(true);
     setError('');
