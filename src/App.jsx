@@ -7,12 +7,14 @@ import OrderHistory from './components/OrderHistory';
 import TrackOrder from './components/TrackOrder';
 import Login from './components/Login';
 import Signup from './components/Signup';
+import DeliveryLogin from './components/DeliveryLogin';
+import DeliveryDashboard from './components/DeliveryDashboard';
 import { ChefHat, Settings } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
 
 function Navigation() {
   const location = useLocation();
-  const isAdmin = location.pathname.startsWith('/admin');
+  const isSpecial = location.pathname.startsWith('/admin') || location.pathname.startsWith('/delivery');
   const { isAuthenticated, user, logout } = useAuth();
 
   return (
@@ -23,7 +25,7 @@ function Navigation() {
       </Link>
       
       <div className="flex flex-wrap items-center gap-4 sm:gap-6 justify-center">
-        {!isAdmin ? (
+        {!isSpecial ? (
           <>
             <Link to="/" className="text-slate-600 hover:text-orange-500 font-medium transition-colors text-sm sm:text-base">
               Order Food
@@ -54,6 +56,9 @@ function Navigation() {
             <Link to="/admin/login" className="flex items-center gap-1.5 text-slate-600 hover:text-orange-500 font-medium transition-colors text-sm sm:text-base border-l border-slate-200 pl-4">
               <Settings className="w-4 h-4" />
               Admin Panel
+            </Link>
+            <Link to="/delivery/login" className="flex items-center gap-1.5 text-slate-600 hover:text-orange-500 font-medium transition-colors text-sm sm:text-base border-l border-slate-200 pl-4">
+              Delivery Panel
             </Link>
           </>
         ) : (
@@ -91,6 +96,8 @@ function App() {
             <Route path="/signup" element={<Signup />} />
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/delivery/login" element={<DeliveryLogin />} />
+            <Route path="/delivery/dashboard" element={<DeliveryDashboard />} />
           </Routes>
         </main>
       </div>
