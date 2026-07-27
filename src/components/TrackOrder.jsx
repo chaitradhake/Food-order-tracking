@@ -3,14 +3,43 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Search, MapPin, Clock, ShieldAlert, CheckCircle, Package, Truck } from 'lucide-react';
 import api from '../api';
 import LoadingSpinner from './LoadingSpinner';
+import { socket } from '../socket';
+import { useAuth } from '../context/AuthContext';
 
 function TrackOrder() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchId, setSearchId] = useState(id || '');
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    socket.connect();
+
+    if (user && user.id) {
+      socket.emit('join', user.id.toString());
+      console.log(`Socket joined room: ${user.id}`);
+    }
+
+    const handleStatusUpdate = ({ orderId, newStatus }) => {
+      setOrder((prevOrder) => {
+        if (prevOrder && prevOrder._id === orderId) {
+          console.log(`Real-time update received for order ${orderId}: ${newStatus}`);
+          return { ...prevOrder, status: newStatus };
+        }
+        return prevOrder;
+      });
+    };
+
+    socket.on('orderStatusUpdated', handleStatusUpdate);
+
+    return () => {
+      socket.off('orderStatusUpdated', handleStatusUpdate);
+      socket.disconnect();
+    };
+  }, [user]);
 
   const fetchOrder = async (orderId) => {
     if (!orderId || !orderId.trim()) return;

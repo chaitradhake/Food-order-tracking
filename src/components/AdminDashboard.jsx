@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { LogOut, Activity, Clock, CheckCircle, Package, ShieldAlert } from 'lucide-react';
 import api from '../api';
 import LoadingSpinner from './LoadingSpinner';
+import { socket } from '../socket';
 
 function AdminDashboard() {
   const [orders, setOrders] = useState([]);
@@ -43,8 +44,26 @@ function AdminDashboard() {
       await Promise.all([fetchOrders(true), fetchSettings()]);
     };
     init();
-    const interval = setInterval(() => fetchOrders(false), 3000); // UI poll matches 3s loop
-    return () => clearInterval(interval);
+
+    socket.connect();
+    socket.emit('join', 'admin');
+    console.log('Socket joined admin room');
+
+    const handleStatusUpdate = ({ orderId, newStatus }) => {
+      console.log(`Admin dashboard: status updated event for ${orderId} -> ${newStatus}`);
+      setOrders((prevOrders) =>
+        prevOrders.map((order) =>
+          order._id === orderId ? { ...order, status: newStatus } : order
+        )
+      );
+    };
+
+    socket.on('orderStatusUpdated', handleStatusUpdate);
+
+    return () => {
+      socket.off('orderStatusUpdated', handleStatusUpdate);
+      socket.disconnect();
+    };
   }, []);
 
   const toggleAutoUpdate = async () => {
